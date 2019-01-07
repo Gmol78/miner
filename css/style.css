@@ -1,0 +1,39 @@
+
+table {
+    border-collapse: collapse;
+    border: 0;
+}
+
+td {
+    width: 30px;
+    height: 30px;
+    border: 1px solid black;
+    text-align: center;
+    vertical-align: middle;
+    position: relative;
+}
+
+td:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #befcff;
+    opacity: 1;
+}
+
+.opened:before {
+    display: none;
+}
+
+
+
+.mined {
+    background-image: url('../img/mine.png');
+    background-size: 80% 80%;
+    background-position: center center;
+    background-repeat: no-repeat;
+}
+
