@@ -21,7 +21,7 @@ td:before {
     left: 0;
     right: 0;
     background-color: #befcff;
-    opacity: 1;
+    opacity: 0.5;
 }
 
 .opened:before {

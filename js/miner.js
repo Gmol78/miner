@@ -9,25 +9,58 @@ function Cell(posX, posY) {
 
     /*properties*/
 
-    this.posX = posX;
-    this.posY = posY;
+    var opened = false;
+    var mined = false;
+    var exploded = false;
+    var minesNear = '';
+    var marked = false;
 
-    this.isCellOpened = false;
-    this.isCellMined = false;
-    this.numberMinesNear = '';
 
     /*methods*/
 
     this.openCell = function () {
-        this.isCellOpened = true;
+        opened = true;
+        if (mined) {
+            exploded = true;
+        }
     };
 
     this.setMine = function () {
-        this.isCellMined = true;
+        mined = true;
     };
 
-    this.addNumberMinesNear = function () {
-        this.numberMinesNear++;
+    this.addMineNear = function () {
+        minesNear++;
+    };
+
+    this.markCell = function () {
+        marked = true;
+    };
+
+    /*getters, setters*/
+
+    this.getX = function () {
+        return posX;
+    };
+
+    this.getY = function () {
+        return posY;
+    };
+
+    this.getMined = function () {
+        return mined;
+    };
+
+    this.getOpened = function () {
+        return opened;
+    };
+
+    this.getMinesNear = function () {
+        return minesNear;
+    };
+
+    this.getExploded = function () {
+        return exploded;
     }
 }
 
@@ -41,20 +74,18 @@ function Cell(posX, posY) {
 
 function Minefield(size, mines) {
 
-    /****properties****/
+    var self = this; //context in closure
 
-    this.fieldSize = size;
-    this.MinesNum = mines;
-    this.cellsArray = [];
+    /****private properties****/
 
-    var self = this;
+    var cellsArray = [];
 
-    /****methods****/
+
+    /****private methods****/
 
     // create field
-    this.createCellsArray = function () {
+    function createCellsArray() {
 
-        var size = this.fieldSize;
         var arr = [];
 
         for (var x = 0; x < size; x++) {
@@ -65,65 +96,90 @@ function Minefield(size, mines) {
                 arr[x][y] = new Cell(x, y);
             }
         }
-        this.cellsArray = arr;
-    };
+        cellsArray = arr;
+    }
 
-    // seting mines
-    this.setMines = function () {
+    // setting mines
+    function mining() {
 
         var minesCount = 0;
-        while (minesCount < this.MinesNum) {
+        while (minesCount < mines) {
 
-            var x = Math.floor(Math.random() * this.fieldSize);
-            var y = Math.floor(Math.random() * this.fieldSize);
+            var x = Math.floor(Math.random() * size);
+            var y = Math.floor(Math.random() * size);
 
-            var cell = this.cellsArray[x][y];
+            var cell = cellsArray[x][y];
 
-            if (!cell.isCellMined && !cell.isCellOpened) {
+            if (!cell.getMined() && !cell.getOpened()) {
 
                 cell.setMine();
                 minesCount++;
             }
         }
-    };
+    }
 
-    // seting numbers of mines near cell
-    this.setNumbers = function () {
-        for (var x = 0; x < this.fieldSize; x++) {
 
-            for (var y = 0; y < this.fieldSize; y++) {
+    function visitLocation(x, y, func) {
 
-                var cell = this.cellsArray[x][y];
-                if (cell.isCellMined) continue;
+        var xBegin = ((x - 1) > 0) ? (x - 1) : 0;
+        var xEnd = ((x + 1) < size) ? (x + 1) : (size - 1);
 
-                var xBegin = ((x - 1) > 0) ? (x - 1) : 0;
-                var xEnd = ((x + 1) < this.fieldSize) ? (x + 1) : (this.fieldSize - 1);
+        var yBegin = ((y - 1) > 0) ? (y - 1) : 0;
+        var yEnd = ((y + 1) < size) ? (y + 1) : (size - 1);
 
-                var yBegin = ((y - 1) > 0) ? (y - 1) : 0;
-                var yEnd = ((y + 1) < this.fieldSize) ? (y + 1) : (this.fieldSize - 1);
+        for (var x1 = xBegin; x1 <= xEnd; x1++) {
+            for (var y1 = yBegin; y1 <= yEnd; y1++) {
 
-                for (var x1 = xBegin; x1 <= xEnd; x1++) {
-                    for (var y1 = yBegin; y1 <= yEnd; y1++) {
+                if (x1 === x && y1 === y) continue;
 
-                        if (x1 === x && y1 === y) continue;
-
-                        var cellTested = this.cellsArray[x1][y1];
-                        if (cellTested.isCellMined) {
-
-                            cell.addNumberMinesNear();
-                        }
-                    }
-                }
-
+                func(x, y, x1, y1);
             }
         }
-    };
+    }
+
+
+    function minesNear(x, y, x1, y1) {
+
+        var cell = cellsArray[x][y];
+        if (cell.getMined()) return;
+
+        var cellTested = cellsArray[x1][y1];
+
+        if (cellTested.getMined()) {
+            cell.addMineNear();
+        }
+    }
+
+
+    // seting numbers of mines near cell
+    function setNumbers() {
+
+        for (var x = 0; x < size; x++) {
+            for (var y = 0; y < size; y++) {
+                visitLocation(x, y, minesNear);
+            }
+        }
+    }
+
+
+    /****public methods****/
 
     // return cell from x,y position
     this.getCellFromPosition = function (x, y) {
-
-        return this.cellsArray[x][y];
+        return cellsArray[x][y];
     };
+
+    this.getNumbersMineNearInCellPosition = function (x, y) {
+        console.log(y);
+        var cell = cellsArray[x][y];
+        return cell.getMinesNear();
+    };
+
+    this.testMined = function (x, y) {
+        var cell = self.getCellFromPosition(x, y);
+        return cell.getMined();
+    };
+
 
     //open cell on x,y position
     this.openCellOnPosition = function (x, y) {
@@ -133,53 +189,55 @@ function Minefield(size, mines) {
 
     };
 
+
     // open region near free cell
     this.fillRegion = function openLoc(x, y) {
-
-
-        console.log(x);
-        console.log(y);
-
-        console.log(self.fieldSize);
 
         x = +x;
         y = +y;
 
         var xBegin = ((x - 1) > 0) ? (x - 1) : 0;
-        var xEnd = ((x + 1) < self.fieldSize) ? (x + 1) : (self.fieldSize - 1);
+        var xEnd = ((x + 1) < size) ? (x + 1) : (size - 1);
 
         var yBegin = ((y - 1) > 0) ? (y - 1) : 0;
-        var yEnd = ((y + 1) < self.fieldSize) ? (y + 1) : (self.fieldSize - 1);
-
-        console.log('xBegin: ' + xBegin);
-        console.log('xEnd: ' + xEnd);
-
-        console.log('yBegin: ' + yBegin);
-        console.log('yEnd: ' + yEnd);
+        var yEnd = ((y + 1) < size) ? (y + 1) : (size - 1);
 
         for (var x1 = xBegin; x1 <= xEnd; x1++) {
             for (var y1 = yBegin; y1 <= yEnd; y1++) {
 
                 if (x1 === x && y1 === y) continue;
 
-                var cellNearest = self.cellsArray[x1][y1];
-                if (!cellNearest.isCellOpened) {
+                var cellNearest = cellsArray[x1][y1];
+                if (!cellNearest.getOpened()) {
                     cellNearest.openCell();
 
-                    if (!cellNearest.numberMinesNear) {
+                    if (!cellNearest.getMinesNear()) {
                         openLoc(x1, y1);
                     }
-
                 }
             }
         }
     };
 
+    /*****getters****/
+
+    this.getSize = function () {
+        return size;
+    };
+
+    this.getMines = function () {
+        return mines;
+    };
+
     /*****init****/
 
-    this.createCellsArray();
-    //this.setMines();
-    //this.setNumbers();
+    createCellsArray();
+
+    this.init = function () {
+        mining();
+        setNumbers();
+    };
+
 }
 
 
@@ -192,7 +250,7 @@ function Minefield(size, mines) {
 function View(minefield) {
 
     /*properties*/
-    this.Field = minefield;
+
 
     /*methods*/
 
@@ -201,13 +259,13 @@ function View(minefield) {
         var table = document.getElementById('minefield');
         table.innerHTML = '';
 
-        for (var x = 0; x < this.Field.fieldSize; x++) {
+        for (var x = 0; x < minefield.getSize(); x++) {
 
             var tr = document.createElement('tr');
 
-            for (var y = 0; y < this.Field.fieldSize; y++) {
+            for (var y = 0; y < minefield.getSize(); y++) {
 
-                var cell = this.Field.cellsArray[x][y];
+                var cell = minefield.getCellFromPosition(x, y);
 
                 var td = document.createElement('td');
                 td.setAttribute('data-x', x);
@@ -215,16 +273,20 @@ function View(minefield) {
 
                 td.setAttribute('id', '' + x + '_' + y);
 
-                if (cell.isCellMined) {
+                if (cell.getMined()) {
                     td.classList.add('mined');
                 }
 
-                if (cell.isCellOpened) {
+                if (cell.getOpened()) {
                     td.classList.add('opened');
                 }
 
-                if (cell.numberMinesNear) {
-                    td.innerHTML = cell.numberMinesNear;
+                if (cell.getExploded()) {
+                    td.classList.add('exploded');
+                }
+
+                if (cell.getMinesNear()) {
+                    td.innerHTML = cell.getMinesNear();
                 }
 
                 tr.appendChild(td);
@@ -237,7 +299,6 @@ function View(minefield) {
     this.setCellToOpened = function (x, y) {
 
         var cell = document.getElementById('' + x + '_' + y);
-        console.log(cell);
         cell.classList.add('opened');
 
     };
@@ -246,6 +307,7 @@ function View(minefield) {
 
     this.renderField();
 }
+
 
 /**
  * конструктор контроллера
@@ -256,7 +318,7 @@ function View(minefield) {
 
 function Miner(size, mines) {
 
-    var self = this; // todo проброс контекста через замыкание потом переделать call, apply итд
+    var self = this; //  контекст через замыкание
 
     /*properties*/
     this.gameOver = false;
@@ -269,9 +331,7 @@ function Miner(size, mines) {
 
 
     /*methods*/
-    this.moving = function () {
-
-        var clickedCell = null;
+    function LeftClickHandler() {
 
         var playField = document.getElementById('minefield');
         playField.onclick = function (e) {
@@ -281,44 +341,46 @@ function Miner(size, mines) {
             xClicked = e.target.getAttribute('data-x');
             yClicked = e.target.getAttribute('data-y');
 
-            //console.log(self.cellTesting(xClicked, yClicked));
-
-            if (self.cellTesting(xClicked, yClicked)) {
-
-                self.gameOver = true;
-            }
-
-            self.playField.openCellOnPosition(xClicked, yClicked);
-
-
-            if (!self.moveNum) {
-                self.playField.setMines();
-                self.playField.setNumbers();
-            }
-
-            if (!self.playField.cellsArray[xClicked][yClicked].numberMinesNear && !self.playField.cellsArray[xClicked][yClicked].isCellMined) {
-                self.playField.fillRegion(xClicked, yClicked);
-            }
-
-            self.view.renderField();
-
-            self.moveNum++;
+            moving(xClicked, yClicked);
 
         }
-    };
+    }
 
-    this.cellTesting = function (x, y) {
+    function moving(xClick, yClick) {
 
-        var cell = this.playField.cellsArray[x][y];
-        return cell.isCellMined;
+        self.playField.openCellOnPosition(xClick, yClick);
+        self.moveNum++;
 
-    };
+        if (self.moveNum === 1) {
+            self.playField.init();
+        }
+
+        if (self.playField.testMined(xClick, yClick)) {
+            gameOver();
+            return;
+        }
+
+        if(!self.playField.getNumbersMineNearInCellPosition(xClick, yClick)){
+            self.playField.fillRegion(xClick, yClick);
+        }
+
+        self.view.renderField();
+
+
+    }
+
+    function gameOver () {
+        self.gameOver = true;
+        // todo добавить функционал конца игры
+    }
+
 
     /*init*/
 
-    this.moving();
+    LeftClickHandler();
 
 }
 
 
 var miner = new Miner(9, 8);
+
